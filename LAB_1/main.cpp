@@ -24,26 +24,27 @@ class CPM{
     void Calculate_Late(vector<CPM> &v_cpm);
 };
 
+/* Oblicz Late Start i Late Finish */
 void CPM::Calculate_Late(vector<CPM> &v_cpm)
 {
-    if(this->v_successors.size() > 0)
+    if(this->v_successors.size() > 0) // jeśli istnieją następniki
     {
-        for(auto i=0; i < this->v_successors.size(); i++)
+        for(int i=0; i < this->v_successors.size(); i++) 
         {
             if(v_cpm[v_successors[i]-1].LS < this->LF || this->LF == -1)
             {
-                this->LF = v_cpm[v_successors[i]-1].LS;
-                this->LS = this->LF - processTime;
-                this->TF = this-> LF - this->EF;
+                this->LF = v_cpm[v_successors[i]-1].LS; // LF = najwcześniejszy LS
+                this->LS = this->LF - processTime; // LS = LF - czas wykonywania projektu
+                this->TF = this-> LF - this->EF; // Total Float = LF - EF
             } 
         }
     }
 }
 
-
+/* Obliczanie Early Start i Early Finish */
 void CPM::Calculate_Early(vector<CPM> &v_cpm)
 {
-   if(this->v_predecessors.size() == 0)
+   if(this->v_predecessors.size() == 0) // jeśli nie ma poprzedników
    {
         this->ES = 0;
         this->EF = this->processTime;
@@ -70,35 +71,7 @@ void find_Predecessor(AdjacencyMatrix graph, vector<CPM> &v_cpm);
 vector<int> v_return_next_vertices(vector<int> checked_predecessor, vector<CPM> &v_cpm);
 
 
-int main()
-{
-    AdjacencyMatrix graph;
-    vector<int> v_Duration_times;
-    
-    if(!reading_from_file("matrix_1", graph, v_Duration_times)){ cout << "!poszlo" << endl; }
-    
-    for(auto & it: graph)
-    {
-        cout << endl;
-        for(auto & it2: it){ cout << it2 << " "; }
-    }
-
-    vector<CPM> v_CPM;
-    v_CPM.reserve(graph.size());
-    
-    for(auto i = 1; i <= graph.size(); i++)
-    {
-        CPM temp;
-        temp.ID = i;
-        temp.processTime = v_Duration_times[i-1];
-        v_CPM.push_back(temp);
-    }
-
-    algorihtm(graph, v_CPM); 
-    return 0;
-}
-
-
+/* czytanie danych z pliku */
 bool reading_from_file(const char * filename, AdjacencyMatrix &graph,  vector<int> &v_duration_times)
 {
     ifstream ReadFile(filename);
@@ -137,6 +110,7 @@ bool reading_from_file(const char * filename, AdjacencyMatrix &graph,  vector<in
     return true;
 }
 
+/* CPM */
 vector<int> v_find_start_vertices(AdjacencyMatrix graph)
 {
     vector<int> v_starts_vertices;
@@ -161,11 +135,12 @@ vector<int> v_find_start_vertices(AdjacencyMatrix graph)
     return v_starts_vertices;
 }
 
+
 void find_Predecessor(AdjacencyMatrix graph,  vector<CPM> &v_cpm)
 {
-    for(auto i = 0; i < graph.size(); i++)
+    for(int i = 0; i < graph.size(); i++)
     {
-        for(auto j = 0; j < graph.size(); j++)
+        for(int j = 0; j < graph.size(); j++)
         {
             if( graph[i][j] == 1)
             {
@@ -234,7 +209,7 @@ void algorihtm(AdjacencyMatrix graph, vector<CPM> &v_cpm)
         v_cpm[list_of_vertices[i]-1].Calculate_Early(v_cpm);
     }
 
-    // Finding procces time
+
     int max_time = -1; // max process time
 
     for(int i = 0; i < v_cpm.size(); i++)
@@ -269,4 +244,35 @@ void algorihtm(AdjacencyMatrix graph, vector<CPM> &v_cpm)
 
     for(auto & it: v_cpm) { cout << it.ID << ":" << it.ES << " " << it.EF << " " << it.LS << " " << it.LF  << " " << it.TF << endl; }
     for(auto & it: critical_path){ cout << it << " "; }
+}
+
+
+
+/* MAIN */
+int main()
+{
+    AdjacencyMatrix graph;
+    vector<int> v_Duration_times;
+    
+    if(!reading_from_file("matrix_1", graph, v_Duration_times)){ cout << "!poszlo" << endl; }
+    
+    for(auto & it: graph)
+    {
+        cout << endl;
+        for(auto & it2: it){ cout << it2 << " "; }
+    }
+
+    vector<CPM> v_CPM;
+    v_CPM.reserve(graph.size());
+    
+    for(int i = 1; i <= graph.size(); i++)
+    {
+        CPM temp;
+        temp.ID = i;
+        temp.processTime = v_Duration_times[i-1];
+        v_CPM.push_back(temp);
+    }
+
+    algorihtm(graph, v_CPM); 
+    return 0;
 }
