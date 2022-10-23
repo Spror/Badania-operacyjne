@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdio>
 #include <vector>
 #include <fstream>
 #include <memory>
@@ -258,7 +259,6 @@ vector<int>  algorihtm(AdjacencyMatrix graph, vector<CPM> &v_cpm)
 }
 
 
-
 /* MAIN */
 int main()
 {
@@ -278,7 +278,6 @@ int main()
     auto sum_sigma = 0.0, sum_time = 0.0;
     int critical_time=0;
 
-
     for (auto & it: v_critical_path)
     {
         sum_sigma += v_CPM[it-1].sigma;
@@ -286,25 +285,31 @@ int main()
         critical_time += v_CPM[it-1].b;
     }
     
-
     auto var = sqrt(sum_sigma);
     auto x=(X-sum_time)/var;
     auto p = 0.5*(1+erf(x/sqrt(2))); // prawdopodobieństwo zakończenia projektu w czasie X dni
     auto c =0.0;
-
+    auto inc = 0;
     
     for(auto i=0.001; i < critical_time; i+=0.001)
     {
-        auto x=(i-sum_time)/var;
+        auto x = (i-sum_time)/var;
         auto pp = 0.5*(1+erf(x/sqrt(2)));
-       
+        
         if(round(pp*1000) == Y*10)
         {
-            cout <<endl << i <<endl;
-            c=i;
+            inc+=1;
+            c+=i;
         }
     }
+    c= c/inc;
 
-
+    cout << endl << "############### SOLUTION ###############" << endl;
+    cout << "Prawdopodobieństwo wykonania procesu po " << X << " dniach wynosi ";
+    printf("%.2f", p*100);
+    cout << "%" << endl;
+    cout << "Prawdopodobieństwo " << Y << "% wykonania procesu otrzymujemy po ";
+    printf("%.2f", c);
+    cout << " dniach" << endl;
     return 0;
 }
