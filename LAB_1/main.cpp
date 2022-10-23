@@ -2,51 +2,54 @@
 #include <vector>
 #include <fstream>
 #include <memory>
+#include <cmath>
+#include <random>
 
 using AdjacencyMatrix = std::vector<std::vector<int>>;
 using namespace std;
 
-
 class CPM{
     public:
     int ID = -1; //ID of a vertex 
-    int processTime; // całkowity czas projektu
-	int dependenciesNumber = 0; // liczba zależności
+    double processTime; // całkowity czas wykonywania projektu
     int ES = -1; // Early Start
     int EF = -1; // Early Finish
     int LS = -1; // Late Start
     int LF = -1; // Late Finish
     int TF = -1; // Total Float
-    vector<int> predecessors; // NASTĘPCA (wierzchołki)
-    vector<int> temp_predecessors; // NASTĘPCA (wierzchołki)
-    vector<int> successors; // NASTĘPCA (wierzchołki)
-    bool isEarlyDone = false;
-    bool isFalseDone = false;
+    int a = -1; // optymistyczny
+    int m = -1; // prawdopodobny
+    int b = -1; // pesymistyczny
+    double sigma = -1; // wariancja
+    vector<int> v_predecessors; // Poprzednicy (wierzchołki)
+    vector<int> v_temp_predecessors; // Poprzednicy (wierzchołki) -> wektor tymczasowych poprzedników
+    vector<int> v_successors; // Następcy (wierzchołki)
 
-    void Calculate_Early(vector<CPM> &cpm_vector);
-    void Calculate_Late(vector<CPM> &cpm_vector);
+    void Calculate_Early(vector<CPM> &v_cpm);
+    void Calculate_Late(vector<CPM> &v_cpm);
 };
 
-void CPM::Calculate_Late(vector<CPM> &cpm_vector)
+/* Oblicz Late Start i Late Finish */
+void CPM::Calculate_Late(vector<CPM> &v_cpm)
 {
-    if(this->successors.size() >0)
+    if(this->v_successors.size() > 0) // jeśli istnieją następniki
     {
-        for(auto i=0; i< this->successors.size(); i++)
+        for(int i=0; i < this->v_successors.size(); i++) 
         {
-            if(cpm_vector[successors[i]-1].LS < this->LF || this->LF == -1)
+            if(v_cpm[v_successors[i]-1].LS < this->LF || this->LF == -1)
             {
-                this->LF = cpm_vector[successors[i]-1].LS;
-                this->LS = this->LF - processTime;
-                this->TF = this-> LF - this->EF;
+                this->LF = v_cpm[v_successors[i]-1].LS; // LF = najwcześniejszy LS
+                this->LS = this->LF - processTime; // LS = LF - czas wykonywania projektu
+                this->TF = this-> LF - this->EF; // Total Float = LF - EF
             } 
         }
     }
 }
 
-
-void CPM::Calculate_Early(vector<CPM> &cpm_vector)
+/* Obliczanie Early Start i Early Finish */
+void CPM::Calculate_Early(vector<CPM> &v_cpm)
 {
-   if(this->predecessors.size() == 0)
+   if(this->v_predecessors.size() == 0) // jeśli nie ma poprzedników
    {
         this->ES = 0;
         this->EF = this->processTime;
@@ -54,12 +57,12 @@ void CPM::Calculate_Early(vector<CPM> &cpm_vector)
 
    else
    {
-        for(auto i=0; i< this->predecessors.size(); i++)
+        for(int i=0; i< this->v_predecessors.size(); i++)
         {
-            if(cpm_vector[predecessors[i]-1].EF > this->ES)
-            {
-                this->ES = cpm_vector[predecessors[i]-1].EF;
-                this->EF = this->ES + processTime;
+            if(v_cpm[v_predecessors[i]-1].EF > this->ES)
+            {               
+                this->ES = v_cpm[v_predecessors[i]-1].EF; // ES = najpóźniejszy z EF wszystkich poprzedników
+                this->EF = this->ES + processTime; // EF = ES + czas trwania operacji
             }
         }
    }
@@ -67,109 +70,61 @@ void CPM::Calculate_Early(vector<CPM> &cpm_vector)
 }
 
 
-bool reading_from_file(const char * filename, AdjacencyMatrix &graph, std::vector<int> &duration_times);
-
-std::vector<int> find_start_vertices(AdjacencyMatrix graph);
-
-void algorihtm(AdjacencyMatrix graph,  vector<CPM> &cpm_vector);
-
-void find_Predecessor(AdjacencyMatrix graph,  vector<CPM> &cpm_vector);
-
-vector<int> return_next_vertices(vector<int> checked_predecessor, vector<CPM> &cpm_vector);
-
-
-int main(){
-
-    AdjacencyMatrix graph;
-    std::vector<int> v_Duration_times;
-    
-    if(!reading_from_file("matrix_1", graph, v_Duration_times))
-    {
-        std::cout << "!poszlo" << std::endl;
-    }
-
-    
-    for(auto & it: graph)
-    {
-        std::cout << std::endl;
-        for(auto & it2: it)
-        {
-            std::cout << it2 << " ";
-        }
-    }
-
-    vector<CPM>  v_CPM;
-    v_CPM.reserve(graph.size());
-    
-    for(auto i = 1; i <= graph.size(); i++)
-    {
-        CPM temp;
-        temp.ID = i;
-        temp.processTime = v_Duration_times[i-1];
-        v_CPM.push_back(temp);
-    }
-
-    algorihtm(graph, v_CPM);
-    
-
-    return 0;
-}
-
-
-bool reading_from_file(const char * filename, AdjacencyMatrix &graph,  std::vector<int> &duration_times)
+/* czytanie danych z pliku */
+bool reading_from_file(const char * filename, AdjacencyMatrix &graph,  vector<int> &v_duration_times, vector<CPM> &v_cpm, int &X, int &Y)
 {
-    std::ifstream ReadFile(filename);
+    ifstream ReadFile(filename);
     if(!ReadFile.is_open())
     {
-        std::cerr << "read_from_file: Problem with file opening \n";
+        cerr << "read_from_file: Problem with file opening \n";
         exit(-1);
     }
 
-    std::vector<int> data_buff_1;
-    std::vector<int> data_buff_2;
-    data_buff_1.clear();
+  
+    vector<int> data_buff_2;
     data_buff_2.clear();
+    CPM temp;
     unsigned int N, M, temp_var;
 
     ReadFile >> N >> M;
-    std::cout << N << " " << M << std::endl;
+    v_cpm.reserve(N);
 
-    for(auto i = 0; i < N; i++)
+    for(int i=0; i < N; i++)
     {
-        ReadFile >> temp_var;
-        data_buff_1.push_back(temp_var);
+        temp.ID = i+1;
+
+        ReadFile >> temp.a;
+        ReadFile >> temp.m;
+        ReadFile >> temp.b;
+        temp.processTime = (temp.a+4*temp.m +temp.b)/6.0;
+        temp.sigma = pow(((temp.b -temp.a)/6.0),2.0);
+        v_cpm.push_back(temp);
     }
     
-    while(ReadFile >> temp_var)
-    {
-        data_buff_2.push_back(temp_var);
-    }
-    
-
+    while(ReadFile >> temp_var){ data_buff_2.push_back(temp_var); } 
     graph.resize(N);
     
-    for(auto & it: graph)
-    {
-        it.resize(N);
-
-    }
-    
+    for(auto & it: graph){ it.resize(N); } 
     for(auto i = 0; i < data_buff_2.size(); i+=2)
-    {
-        graph[data_buff_2[i+1]-1][data_buff_2[i]-1]=1;
+    {   
+        if(i < data_buff_2.size()-2)
+            graph[data_buff_2[i+1]-1][data_buff_2[i]-1]=1;
+        else
+        {
+            X = data_buff_2[i];
+            Y = data_buff_2[i+1];
+        }
     }
-    
-    duration_times = data_buff_1;
     ReadFile.close();
     return true;
 }
 
-std::vector<int> find_start_vertices(AdjacencyMatrix graph)
+/* CPM */
+vector<int> v_find_start_vertices(AdjacencyMatrix graph)
 {
+    vector<int> v_starts_vertices;
 
-    std::vector<int> v_starts_vertices;
-
-    for(auto i = 1; i <= graph.size(); i++)
+    for(int i = 1; i <= graph.size(); i++)
     {
         bool start_vertex = true;
         for(auto const & it: graph[i-1])
@@ -189,47 +144,47 @@ std::vector<int> find_start_vertices(AdjacencyMatrix graph)
     return v_starts_vertices;
 }
 
-void find_Predecessor(AdjacencyMatrix graph,  vector<CPM> &cpm_vector)
+
+void find_Predecessor(AdjacencyMatrix graph,  vector<CPM> &v_cpm)
 {
-    for(auto i = 0; i < graph.size(); i++)
+    for(int i = 0; i < graph.size(); i++)
     {
-        for(auto j = 0; j < graph.size(); j++)
+        for(int j = 0; j < graph.size(); j++)
         {
             if( graph[i][j] == 1)
             {
-                cpm_vector[i].predecessors.push_back(j+1);
-                cpm_vector[i].temp_predecessors.push_back(j+1);
+                v_cpm[i].v_predecessors.push_back(j+1);
+                v_cpm[i].v_temp_predecessors.push_back(j+1);
             }
         }
     }
     
 
-    for(auto i = 0; i < graph.size(); i++)
+    for(int i = 0; i < graph.size(); i++)
     {
-        for(auto j = 0; j < graph.size(); j++)
+        for(int j = 0; j < graph.size(); j++)
         {
             if( graph[j][i] == 1)
             {
-                cpm_vector[i].successors.push_back(j+1);
+                v_cpm[i].v_successors.push_back(j+1);
             }
         }
     }
 }
 
-vector<int> return_next_vertices(int checked_predecessor, vector<CPM> &cpm_vector)
+vector<int> v_return_next_vertices(int checked_predecessor, vector<CPM> &v_cpm)
 { 
     vector<int> buffor;
    
-    for(auto & it: cpm_vector)
-    {
-         
-        // iteruj po wszystkich elementach wektora temp_predecessors
-        for (vector<int>::iterator it2 = it.temp_predecessors.begin(); it2 != it.temp_predecessors.end();) 
+    for(auto & it: v_cpm)
+    {        
+        // iteruj po wszystkich elementach wektora v_temp_predecessors
+        for (vector<int>::iterator it2 = it.v_temp_predecessors.begin(); it2 != it.v_temp_predecessors.end();) 
         {
             if(*it2 == checked_predecessor)
             {
-                 it2 = it.temp_predecessors.erase(it2);
-                 if(it.temp_predecessors.size() == 0)
+                 it2 = it.v_temp_predecessors.erase(it2);
+                 if(it.v_temp_predecessors.size() == 0)
                  {
                     buffor.push_back(it.ID);
                  }
@@ -241,77 +196,115 @@ vector<int> return_next_vertices(int checked_predecessor, vector<CPM> &cpm_vecto
     return buffor;
 }
 
-void algorihtm(AdjacencyMatrix graph, vector<CPM> &cpm_vector)
+vector<int>  algorihtm(AdjacencyMatrix graph, vector<CPM> &v_cpm)
 {
-
-    vector<int> list_of_vertices = find_start_vertices(graph);
+    vector<int> list_of_vertices = v_find_start_vertices(graph);
     vector<int> checked_predecessors;
-    find_Predecessor(graph, cpm_vector);
+    find_Predecessor(graph, v_cpm);
     vector<int> temp;
-   
-   
-    for(auto i = 0; i < cpm_vector.size(); i++)
+     
+    for(int i = 0; i < v_cpm.size(); i++)
     {
-        temp = return_next_vertices(list_of_vertices[i], cpm_vector);
-        for(auto j = 0; j <temp.size(); j++)
+        temp = v_return_next_vertices(list_of_vertices[i], v_cpm);
+        for(int j = 0; j <temp.size(); j++)
         {
             list_of_vertices.push_back(temp[j]);
         }
         temp.clear();
     }
 
-    for(auto i =0; i < cpm_vector.size(); i++)
+    for(int i =0; i < v_cpm.size(); i++)
     {
-        cpm_vector[list_of_vertices[i]-1].Calculate_Early(cpm_vector);
+        v_cpm[list_of_vertices[i]-1].Calculate_Early(v_cpm);
     }
 
-    // Finding procces time
-    int max_process_time = -1;
 
-    for(auto i = 0; i < cpm_vector.size(); i++)
+    int max_time = -1; // max process time
+
+    for(int i = 0; i < v_cpm.size(); i++)
     {
-        if(max_process_time < cpm_vector[i].EF)
-        {
-            max_process_time = cpm_vector[i].EF;
-        }
+        if(max_time < v_cpm[i].EF){ max_time = v_cpm[i].EF; }
     }
 
-  
     cout << endl;
 
-    for(auto i = cpm_vector.size(); i > 0; i--)
+    for(int i = v_cpm.size(); i > 0; i--)
     {
-        if(i == cpm_vector.size() || cpm_vector[list_of_vertices[i-1]-1].successors.size() == 0 )
+        if(i == v_cpm.size() || v_cpm[list_of_vertices[i-1]-1].v_successors.size() == 0 )
         {
-            cpm_vector[list_of_vertices[i-1]-1].LF = max_process_time;
-            cpm_vector[list_of_vertices[i-1]-1].LS = max_process_time -cpm_vector[list_of_vertices[i-1]-1].processTime;
-            cpm_vector[list_of_vertices[i-1]-1].TF = max_process_time -cpm_vector[list_of_vertices[i-1]-1].EF ;
+            v_cpm[list_of_vertices[i-1]-1].LF = max_time;
+            v_cpm[list_of_vertices[i-1]-1].LS = max_time -v_cpm[list_of_vertices[i-1]-1].processTime;
+            v_cpm[list_of_vertices[i-1]-1].TF = max_time -v_cpm[list_of_vertices[i-1]-1].EF ;
         }
         else
         {
-             cpm_vector[list_of_vertices[i-1]-1].Calculate_Late(cpm_vector);
+             v_cpm[list_of_vertices[i-1]-1].Calculate_Late(v_cpm);
         }
     }
 
     vector<int> critical_path;
-    for(auto i = 0; i < cpm_vector.size(); i++)
+    for(int i = 0; i < v_cpm.size(); i++)
     {
-        if(cpm_vector[list_of_vertices[i]-1].TF == 0)
+        if(v_cpm[list_of_vertices[i]-1].TF == 0)
         {
             critical_path.push_back(list_of_vertices[i]);
         }
     }
 
-    for(auto & it: cpm_vector)
+    for(auto & it: v_cpm) { cout << it.ID << ":" << it.ES << " " << it.EF << " " << it.LS << " " << it.LF  << " " << it.TF << endl; }
+    for(auto & it: critical_path){ cout << it << " "; }
+
+    return critical_path;
+}
+
+
+
+/* MAIN */
+int main()
+{
+    AdjacencyMatrix graph;
+    vector<int> v_Duration_times;
+    vector<CPM> v_CPM;
+    int X,Y;
+    if(!reading_from_file("matrix_1", graph, v_Duration_times, v_CPM,X,Y)){ cout << "!poszlo" << endl; }
+    
+    for(auto & it: graph)
     {
-        cout << it.ID << ":" << it.ES << " " << it.EF << " " << it.LS << " " << it.LF  << " " << it.TF << endl;
+        cout << endl;
+        for(auto & it2: it){ cout << it2 << " "; }
     }
 
-    for(auto & it: critical_path)
-    {
-        cout << it << " ";
-    }
+    auto v_critical_path = algorihtm(graph, v_CPM); 
+    auto sum_sigma = 0.0, sum_time = 0.0;
+    int critical_time=0;
 
+
+    for (auto & it: v_critical_path)
+    {
+        sum_sigma += v_CPM[it-1].sigma;
+        sum_time += v_CPM[it-1].processTime;
+        critical_time += v_CPM[it-1].b;
+    }
+    
+
+    auto var = sqrt(sum_sigma);
+    auto x=(X-sum_time)/var;
+    auto p = 0.5*(1+erf(x/sqrt(2))); // prawdopodobieństwo zakończenia projektu w czasie X dni
+    auto c =0.0;
 
     
+    for(auto i=0.001; i < critical_time; i+=0.001)
+    {
+        auto x=(i-sum_time)/var;
+        auto pp = 0.5*(1+erf(x/sqrt(2)));
+       
+        if(round(pp*1000) == Y*10)
+        {
+            cout <<endl << i <<endl;
+            c=i;
+        }
+    }
+
+
+    return 0;
 }
