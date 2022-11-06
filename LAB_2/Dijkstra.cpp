@@ -4,15 +4,16 @@
 
 using namespace std;
 
-using adjacency_list_t = std::vector<std::vector<neighbor>>;
+
 
 struct neighbor{
     int target;
     int  weight;
-    neighbor(int target_arg): target(target_arg) {}
+    neighbor(int target_arg, int weight_arg): target(target_arg), weight(weight_arg) {}
 };
 
 
+using adjacency_list_t = std::vector<std::vector<neighbor>>;
 
 /* czytanie danych z pliku */
 bool reading_from_file(const char * filename, adjacency_list_t &graph, int &start)
@@ -29,25 +30,34 @@ bool reading_from_file(const char * filename, adjacency_list_t &graph, int &star
     ReadFile >> start;
     ReadFile >> graph_size;
     vector<int> buffor;
-    
     int temp_var;
+    
 
 
     while(ReadFile >> temp_var)
     {
         buffor.push_back(temp_var);
     }
-    
+
+    ReadFile.close();
+  
+
     for(auto i = 0; i < graph_size; i++)
     {
+        vector<neighbor> temp_vecN;
         for(auto j = 0; j < graph_size; j++)
         {
-
+            
+            if(buffor[i*graph_size+j])
+            {
+                neighbor temp_neighbor((i*graph_size+j)%graph_size, buffor[i*graph_size+j]);
+                temp_vecN.push_back(temp_neighbor);
+            }
         }
-        
+        graph.push_back(temp_vecN);
     }
 
-  
+    
     
     return true;
 }
@@ -57,8 +67,7 @@ int main()
     adjacency_list_t warehouse_graph;
     int start_vertex = 0;
 
-    reading_from_file
-
+     if(!reading_from_file("dane.txt", warehouse_graph,start_vertex)){ cout << "!poszlo" << endl; }
 
     return 0;
 }
