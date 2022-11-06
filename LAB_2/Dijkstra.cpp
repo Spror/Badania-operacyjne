@@ -62,12 +62,33 @@ bool reading_from_file(const char * filename, adjacency_list_t &graph, int &star
     return true;
 }
 
+void print_graph(adjacency_list_t graph)
+{
+     for (auto i = 0; i <graph.size(); i++)
+     {
+
+        cout << i << ": " ;
+        for (auto & it: graph[i])
+        {   
+            cout << it.target << "//" << it.weight << "   ";
+        }
+        cout << endl;
+     }
+}
+
+
+void dijkstra_algorithm(adjacency_list_t graph, int start)
+{
+    
+}
+
 int main()
 {
     adjacency_list_t warehouse_graph;
     int start_vertex = 0;
 
      if(!reading_from_file("dane.txt", warehouse_graph,start_vertex)){ cout << "!poszlo" << endl; }
+     print_graph(warehouse_graph);
 
     return 0;
 }
