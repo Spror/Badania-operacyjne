@@ -1,6 +1,11 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <set>
+#include <list>
+#include <utility> 
+#include <algorithm>
+#include <iterator>
 
 using namespace std;
 
@@ -79,7 +84,58 @@ void print_graph(adjacency_list_t graph)
 
 void dijkstra_algorithm(adjacency_list_t graph, int start)
 {
+    auto graph_size = graph.size();
+    std::vector<int> minimal_distance, previous;
+    minimal_distance.clear();
+    minimal_distance.resize(graph_size, INT32_MAX);
+    minimal_distance[start] = 0;
+    previous.resize(graph_size, -1);
+
+    std::set<pair<int,int>> ver_queue;
+    ver_queue.insert(std:: make_pair(minimal_distance[start],start));
+
+    while(!ver_queue.empty())
+    {
+        auto dist = ver_queue.begin()->first;
+        auto u = ver_queue.begin()->second;
+        ver_queue.erase(ver_queue.begin());
+        
+        const auto neighbors = graph[u];
+        for(vector<neighbor>::const_iterator neighbor_iter = neighbors.begin(); neighbor_iter != neighbors.end(); neighbor_iter++)
+        {
+            auto v = neighbor_iter->target;
+            auto weight = neighbor_iter->weight;
+            auto distance_through_u = dist + weight;
+	        if (distance_through_u < minimal_distance[v]) 
+            {
+                ver_queue.erase(make_pair(minimal_distance[v], v));
+
+                minimal_distance[v] = distance_through_u;
+                previous[v] = u;
+                ver_queue.insert(make_pair(minimal_distance[v], v));
+
+	         }
+        }
+
+    }
+    list<int> path;
     
+    for(auto i = 0; i < graph.size(); i++)
+    {
+        auto final = i;
+        for ( ; final != -1; final = previous[final])
+            path.push_front(final);
+
+        cout << start << "-->" << i << "   " ;
+        for (auto & it: path)
+        {
+            cout << it << " ";
+        }
+        cout << " min distance: " << minimal_distance[i]<< endl;
+        path.clear();
+    }
+
+
 }
 
 int main()
@@ -89,6 +145,7 @@ int main()
 
      if(!reading_from_file("dane.txt", warehouse_graph,start_vertex)){ cout << "!poszlo" << endl; }
      print_graph(warehouse_graph);
+     dijkstra_algorithm(warehouse_graph, start_vertex);
 
     return 0;
 }
