@@ -1,25 +1,15 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
-#include <set>
-#include <list>
-#include <utility> 
-#include <algorithm>
-#include <iterator>
 #include <chrono>
-
+#include <queue>
 using namespace std;
 
-struct neighbor{
-    int target;
-    int  weight;
-    neighbor(int target_arg, int weight_arg): target(target_arg), weight(weight_arg) {}
-};
 
-using adjacency_list_t = vector<vector<neighbor>>;
+using matrix = vector<vector<int>>;
 
 /* czytanie danych z pliku */
-bool reading_from_file(const char * filename, adjacency_list_t &graph, int &start)
+bool reading_from_file(const char * filename, matrix &graph)
 {
     int graph_size;
     ifstream ReadFile(filename);
@@ -29,8 +19,6 @@ bool reading_from_file(const char * filename, adjacency_list_t &graph, int &star
         cerr << "read_from_file: Problem with file opening \n";
         exit(-1);
     }
-
-    ReadFile >> start;
     ReadFile >> graph_size;
     vector<int> buffor;
     int temp_var;
@@ -40,114 +28,120 @@ bool reading_from_file(const char * filename, adjacency_list_t &graph, int &star
         buffor.push_back(temp_var);
     }
 
-    ReadFile.close();
-
-    for(auto i = 0; i < graph_size; i++)
+    if(buffor.size() != graph_size*graph_size)
     {
-        vector<neighbor> temp_vecN;
-        for(auto j = 0; j < graph_size; j++)
-        {
-            
-            if(buffor[i*graph_size+j])
-            {
-                neighbor temp_neighbor((i*graph_size+j)%graph_size, buffor[i*graph_size+j]);
-                temp_vecN.push_back(temp_neighbor);
-            }
-        }
-        graph.push_back(temp_vecN);
+        cerr << "Reading file failed" << endl;
+        exit(-1);
     }
+
+    ReadFile.close();
+    auto inc = 0;
+    graph.resize(graph_size);
+    
+    for(auto i =0; i < buffor.size(); i++)
+    {
+        if(i % graph_size == 0 && i!=0)
+            inc++;
+        
+        graph[inc].push_back(buffor[i]);
+    }
+
     return true;
 }
 
-void print_graph(adjacency_list_t graph)
+void print_graph(matrix graph)
 {
-     for (auto i = 0; i <graph.size(); i++)
-     {
-
-        cout << i << ": " ;
-        for (auto & it: graph[i])
-        {   
-            cout << it.target << "//" << it.weight << "   ";
+    for(auto & it: graph)
+    {
+        for(auto & it2: it)
+        {
+            cout << it2 << " ";
         }
         cout << endl;
-     }
-}
-
-void printPaths(vector<int> previous, vector<int> minimal_distance, int size_graph, int start)
-{
-
-    list<int> path;
-    
-    for(auto i = 0; i < size_graph; i++)
-    {
-        auto final = i;
-        for ( ; final != -1; final = previous[final])
-            path.push_front(final);
-
-        cout << start << "-->" << i << "   " ;
-        for (auto & it: path)
-        {
-            cout << it << " ";
-        }
-        cout << " min distance: " << minimal_distance[i]<< endl;
-        path.clear();
     }
-
 }
 
 
-void dijkstraAlgorithm(adjacency_list_t graph, int start)
+bool findPath(matrix &graph, int start, int final, vector<int> &path)
 {
-    auto start1 = chrono::steady_clock::now();
-    auto graph_size = graph.size();
-    vector<int> minimal_distance, previous;
-    minimal_distance.clear();
-    minimal_distance.resize(graph_size, INT32_MAX);
-    minimal_distance[start] = 0;
-    previous.resize(graph_size, -1);
-    auto p =0;
-    set<pair<int,int>> ver_queue;
-    ver_queue.insert(make_pair(minimal_distance[start],start));
+    vector<bool> visited;
+    visited.resize(graph.size(), 0);
 
-    while(!ver_queue.empty())
+
+    queue<int> qset;
+    qset.push(start);
+    visited[start] = true;
+    path[start]= -1;
+
+    while(!qset.empty())
     {
-        auto dist = ver_queue.begin()->first;
-        auto u = ver_queue.begin()->second;
-        ver_queue.erase(ver_queue.begin());
-        p++;
-        const auto neighbors = graph[u];
-        for(vector<neighbor>::const_iterator neighbor_iter = neighbors.begin(); neighbor_iter != neighbors.end(); neighbor_iter++)
+        auto u = qset.front();
+        qset.pop();
+
+        for(auto i = 0; i < graph.size(); i++)
         {
-            auto v = neighbor_iter->target;
-            auto weight = neighbor_iter->weight;
-            auto distance_through_u = dist + weight;
-	        if (distance_through_u < minimal_distance[v]) 
+            if(visited[i] == false && graph[u][i] > 0)
             {
-                ver_queue.erase(make_pair(minimal_distance[v], v));
-                minimal_distance[v] = distance_through_u;
-                previous[v] = u;
-                ver_queue.insert(make_pair(minimal_distance[v], v));
+                if(i == final)
+                {
+                    path[i] = u;
+                    return true;
+                }
+                qset.push(i);
+                path[i] = u;
+                visited[i] = true;
+            }
 
-	         }
+        }
+    }
+    return false;
+
+}
+
+void fordFulkerson(matrix graph, int start, int final)
+{
+    matrix graph_copy = graph;
+    auto graph_size = graph.size();
+    auto maxFlow = 0;
+    vector<int> path;
+    path.resize(graph_size);
+    
+
+    
+    while(findPath(graph_copy, start, final, path))
+    {
+        auto pathFlow = INT32_MAX;
+
+        for(auto i = final; i!=start; i = path[i])
+        {
+            auto temp = path[i];
+            pathFlow = min(pathFlow, graph_copy[temp][i]);
         }
 
-    }
-    auto end = chrono::steady_clock::now();
-    chrono::duration<double> elapsed_seconds = end-start1;
-    cout << "elapsed time: " << elapsed_seconds.count() << "s\n";
+        for(auto i = final; i!=start; i = path[i])
+        {
+            auto temp = path[i];
+            graph_copy[temp][i] -= pathFlow;
+            graph_copy[i][temp] += pathFlow;
+        }
 
-    printPaths(previous, minimal_distance, graph_size, start);
+        maxFlow += pathFlow;
+    }
+
+
+    cout << "max flow: " << maxFlow << endl;
+
 }
 
 int main()
 {
-    adjacency_list_t graph;
-    int start_vertex = 0;
+    matrix graph;
     
-    if(!reading_from_file("dane2.txt", graph, start_vertex)){ cout << "!poszlo" << endl; }
+    if(!reading_from_file("dane2.txt", graph)){ cout << "!poszlo" << endl; }
     print_graph(graph);
-    cout << endl << "###############: Dijkstra" << endl;
-    dijkstraAlgorithm(graph, start_vertex);
+
+    fordFulkerson(graph,0 ,14);
+ 
 
 
     return 0;
