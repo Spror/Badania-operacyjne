@@ -140,7 +140,7 @@ int main()
     if(!reading_from_file("dane2.txt", graph)){ cout << "!poszlo" << endl; }
     print_graph(graph);
 
-    fordFulkerson(graph,0 ,14);
+    fordFulkerson(graph,0 ,7);
  
 
 
