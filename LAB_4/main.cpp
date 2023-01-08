@@ -10,7 +10,8 @@ int main() {
   TSP obj("dane.txt");
 
   cout << obj.calculateDistance() << endl;
-  obj.opt_2();
+  //obj.opt_2();
+  obj.simulatedAnnealingAlgorithm();
   cout << obj.calculateDistance() << endl;
 
   return 0;

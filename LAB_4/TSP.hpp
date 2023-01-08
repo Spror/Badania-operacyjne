@@ -5,6 +5,14 @@
 #include <iostream>
 #include <cmath>
 #include <iterator>
+#include <random>
+#include <ctime>
+#include <cstdlib>
+#include <fstream>
+
+#define COOLING_FACTOR 0.96
+
+void saveToFile();
 struct city
 {
     int x;
@@ -28,6 +36,7 @@ class TSP
     void printCities();
     unsigned long calculateDistance();
     void opt_2();
+    void simulatedAnnealingAlgorithm();
     
     
 };
