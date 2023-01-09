@@ -1,20 +1,6 @@
 #include "TSP.hpp"
 #include <chrono>
 
-std::vector<int> VecTofile;
-
-void saveToFile() {
-  std::ofstream outfile;
-
-  outfile.open("yourfile.txt", std::ios_base::app); // std::ios_base::app
-
-  for (auto &it : VecTofile) {
-    outfile << it << "\n";
-  }
-
-  outfile.close();
-}
-
 TSP::TSP(const char *filename) {
 
   std::ifstream ReadFile(filename);
@@ -134,10 +120,8 @@ void TSP::opt_2() {
     this->cities = citiesCopy;
   }
   auto end_2opt = std::chrono::steady_clock::now();
-  std::chrono::duration<double> elapsed_seconds = end_2opt-start_2opt;
+  std::chrono::duration<double> elapsed_seconds = end_2opt - start_2opt;
   std::cout << "elapsed time [2-opt]: " << elapsed_seconds.count() << "s\n";
-
-
 }
 
 void TSP::swap_opt_2(std::vector<city>::iterator first,
@@ -149,60 +133,55 @@ void TSP::swap_opt_2(std::vector<city>::iterator first,
 
 void TSP::simulatedAnnealingAlgorithm() {
 
-  auto citiesCopy = this->cities;
-  auto tourSize = citiesCopy.size();
-  auto compute = true;
-  auto T = 8000000.0;
+  auto newCities = cities;
+  auto bestCities = cities;
+  auto const tourSize = newCities.size();
+  double T = 500.0;
+
   // hardware RNG
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_int_distribution<> distr(0, tourSize - 1);
+  std::uniform_real_distribution<> dis_nor(0.0, 1.0);
 
-  // calculate best distance
-  int bestDistance = this->calculateDistance();
-  VecTofile.push_back(bestDistance);
-  auto iter = 0;
-  
+  auto const iteration = 30;
+  auto const maxEpoch = 1000;
+
+  auto epoch = 0;
+
   auto start_SA = std::chrono::steady_clock::now();
 
-  while (iter < 1000) {
+  while (epoch < maxEpoch) {
+    for (auto i = 0; i < iteration; i++) {
 
-    auto first = distr(gen);
-    auto second = distr(gen);
+      int first = distr(gen);
+      int second;
 
-    std::iter_swap(citiesCopy.begin() + first, citiesCopy.begin() + second);
+      do {
+        second = distr(gen);
+      } while (first == second);
 
-    int distanceAfterSwap = this->calculateDistance(citiesCopy);
+      newCities = bestCities;
+      swap_opt_2(newCities.begin() + first, newCities.begin() + second);
+      int diff = calculateDistance(bestCities) - calculateDistance(newCities);
 
-    if (distanceAfterSwap < bestDistance) {
-      cities = citiesCopy;
-      VecTofile.push_back(distanceAfterSwap);
-      iter++;
-      // T-= 0.05;
-      T *= COOLING_FACTOR;
-
-    }
-
-    else {
-      
-      auto Propability = exp(double(bestDistance - distanceAfterSwap) / T); // e(f(X)−f(X'))/T
-      auto randomValue = ((double)rand() / (RAND_MAX));
-
-      if (Propability > randomValue) {
-        cities = citiesCopy;
-        iter++;
-        // T-= 0.05;
-        T *= COOLING_FACTOR;
-        // if(T <= 0.06){T = 0.0001;}
-
-        VecTofile.push_back(distanceAfterSwap);
+      if (diff > 0) {
+        bestCities = newCities;
+      } else {
+        auto propability = exp(double(diff) / T); //         e(f(X)−f(X'))/T
+        auto randomValue = dis_nor(gen);
+        if (randomValue <= propability)
+          bestCities = newCities;
       }
     }
+    T *= COOLING_FACTOR;
+    epoch++;
   }
-  std::cout <<  "Koncowe T: " << T << std::endl;
-  auto end_SA = std::chrono::steady_clock::now();
-  std::chrono::duration<double> elapsed_seconds = end_SA-start_SA;
-  std::cout << "elapsed time [Simulated Annealing]: " << elapsed_seconds.count() << "s\n";
 
-  saveToFile();
+  cities = bestCities;
+  std::cout << "Koncowe T: " << T << std::endl;
+  auto end_SA = std::chrono::steady_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end_SA - start_SA;
+  std::cout << "elapsed time [Simulated Annealing]: " << elapsed_seconds.count()
+            << "s\n";
 }

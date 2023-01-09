@@ -6,13 +6,30 @@
 #include <vector>
 using namespace std;
 
-int main() {
-  TSP obj("dane.txt");
+int main(int argc, const char *argv[]) {
 
-  cout << obj.calculateDistance() << endl;
-  //obj.opt_2();
-  obj.simulatedAnnealingAlgorithm();
-  cout << obj.calculateDistance() << endl;
+  if(argc != 2){
+    std::cerr << "ERROR! Too many or too few options" << std::endl;
+    return (-1);
+  }
+  else{
+
+    TSP obj("dane.txt");
+    cout << obj.calculateDistance() << endl;
+    if(argv[1] == std::string("2-opt")){
+      obj.opt_2();
+      cout << obj.calculateDistance() << endl;
+    }
+    else if(argv[1] == std::string("sa")){
+      obj.simulatedAnnealingAlgorithm();
+      cout << obj.calculateDistance() << endl;
+    }
+    else{
+      std::cerr << "ERROR! the program can receive only 2 possibility \"2-opt\" or \"sa\"" << std::endl;
+      return (-1);
+    }
+  }
+  
 
   return 0;
 }

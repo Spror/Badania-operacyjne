@@ -1,42 +1,37 @@
 #pragma once
 #include <algorithm>
-#include <vector>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
 #include <fstream>
 #include <iostream>
-#include <cmath>
 #include <iterator>
 #include <random>
-#include <ctime>
-#include <cstdlib>
-#include <fstream>
+#include <vector>
 
-#define COOLING_FACTOR 0.96
+#define COOLING_FACTOR 0.95
 
 void saveToFile();
-struct city
-{
-    int x;
-    int y;
-    int ID;
+struct city {
+  int x;
+  int y;
+  int ID;
 };
 
+class TSP {
+  std::vector<city> cities;
 
-class TSP
-{
-    std::vector<city> cities;
+  int distance(city city_a, city city_b);
+  unsigned long calculateDistance(std::vector<city> tour);
+  void swap_opt_2(std::vector<city>::iterator first,
+                  std::vector<city>::iterator last);
 
-    int distance(city city_a, city city_b);
-    unsigned long calculateDistance(std::vector<city>  tour);
-    void swap_opt_2(std::vector<city>::iterator first, std::vector<city>::iterator last);
+public:
+  TSP() = delete;
+  TSP(const char *filename);
 
-    public:
-    TSP() = delete;
-    TSP(const char * filename);
-
-    void printCities();
-    unsigned long calculateDistance();
-    void opt_2();
-    void simulatedAnnealingAlgorithm();
-    
-    
+  void printCities();
+  unsigned long calculateDistance();
+  void opt_2();
+  void simulatedAnnealingAlgorithm();
 };
