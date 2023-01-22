@@ -185,3 +185,64 @@ void TSP::simulatedAnnealingAlgorithm() {
   std::cout << "elapsed time [Simulated Annealing]: " << elapsed_seconds.count()
             << "s\n";
 }
+
+int TSP::TSPDynamic(int mark, int position, std::vector<std::vector<int>> &memo_vec, std::vector<std::vector<int>> &distance_vec) {
+  if (mark == ((1 << position )| 3)) {
+    return distance_vec[1][position];
+  }
+
+  if(memo_vec[position][mark] != 0)
+  {
+    return memo_vec[position][mark];
+  }
+
+  auto res = 90000000; 
+  int n = distance_vec.size()-1;
+
+  for (int j = 1; j <= n; j++)
+        if ((mark & (1 << j)) && j != position && j != 1)
+            res = std::min(res, TSPDynamic(mark & (~(1 << position)), j , memo_vec, distance_vec)
+                                    + distance_vec[j][position]);
+    return memo_vec[position][mark] = res;
+}
+
+int TSP::dynamicProgrammingAlgorithm() {
+
+  int n = this->cities.size();
+  std::vector<std::vector<int>> distance_vec(n+1);
+
+  auto start_DP = std::chrono::steady_clock::now();
+
+  for (auto i = 0; i < n+1; i++) {
+    for (auto j = 0; j < n+1; j++) {
+      if (i == j || i == 0 || j == 0)
+        distance_vec[i].push_back(0);
+      else
+        distance_vec[i].push_back(this->distance(cities[i-1], cities[j-1]));
+    }
+  }
+
+
+  std::vector<std::vector<int>> memo_vec;
+
+  for(auto i = 0; i < (n + 1); i++){
+    std::vector<int> tmp;
+    for(auto j =0; j <( 1 << (n + 1)); j++){
+      tmp.push_back(0);
+    }
+    memo_vec.push_back(tmp);
+
+  }
+
+
+  int solution = 90000000;
+  for(auto i = 1; i <= n; i++){
+    solution = std::min( solution, TSPDynamic((1 << (n + 1)) - 1, i, memo_vec, distance_vec) + distance_vec[i][1]);
+  }
+
+  auto end_DP = std::chrono::steady_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end_DP - start_DP;
+  std::cout << "elapsed time [Dynamic Programing]: " << elapsed_seconds.count() << "s\n";
+
+  return solution;
+}

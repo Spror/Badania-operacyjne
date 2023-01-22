@@ -26,6 +26,8 @@ class TSP {
   void swap_opt_2(std::vector<city>::iterator first,
                   std::vector<city>::iterator last);
 
+  int TSPDynamic(int mark, int position, std::vector<std::vector<int>> &memo_vec, std::vector<std::vector<int>> &distance_vec);
+
 public:
   TSP() = delete;
   TSP(const char *filename);
@@ -34,4 +36,5 @@ public:
   unsigned long calculateDistance();
   void opt_2();
   void simulatedAnnealingAlgorithm();
+  int dynamicProgrammingAlgorithm();
 };
